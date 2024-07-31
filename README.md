@@ -1,3 +1,13 @@
+# How to pack
+
+```bash
+$ bash ./pack.sh
+```
+
+`build`: build files
+
+`dist`: whl file
+
 # Hidet: An Open-Source Deep Learning Compiler
 [**Documentation**](http://docs.hidet.org/)  |
 [**Research Paper**](https://dl.acm.org/doi/10.1145/3575693.3575702)  |

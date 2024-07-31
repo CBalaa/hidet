@@ -100,6 +100,11 @@ def tensor_to(self: Tensor, *args, **kwargs) -> Tensor:
             if self.is_symbolic() and instantiate_device(device_from_torch(arg)) != self.device:
                 raise NotImplementedError('hidet: Tensor.to(..., device=...) is not supported for symbolic tensors.')
             device = arg
+        elif isinstance(arg, str): # changed
+            if arg in ["cuda", "cpu"]:
+                device = torch.device(arg)
+            else:
+                raise ValueError(f'Unsupported device type: {type(arg)}')
         elif isinstance(arg, Tensor):
             dtype = arg.dtype
             if self.is_symbolic() and arg.device != self.device:
@@ -312,3 +317,27 @@ def tensor_new_zeros(self: Tensor, *size, dtype=None, layout=None, device=None, 
 @register_method(torch.Tensor.zero_)
 def tensor_zero_(self: Tensor):
     return ops.full(self.shape, dtype=self.dtype, device=self.device, value=self.dtype.zero)
+
+# ====== add by kgc ======
+@register_method(torch.Tensor.abs)
+def torch_Tensor_abs(self):
+    return ops.abs(self)
+
+@register_method(torch.Tensor.reshape)
+def tensor_reshape_method(self: Tensor, shape) -> Tensor:
+    return ops.reshape(self, shape)
+
+@register_method(torch.Tensor.lgamma)
+def torch_lgamma(self: Tensor) -> Tensor:
+    return ops.lgamma(self)
+
+
+import hidet
+@register_method(torch.Tensor.scatter_)
+def torch_scatter_(self: Tensor, dim, index, src):
+    if isinstance(src, int):
+        src = ops.broadcast(hidet.asarray(src), self.shape).to_device(self.device)
+    dim = (dim + len(self.shape)) % len(self.shape)
+    return ops.scatter(self, dim, index, src)
+
+# ====== end ======

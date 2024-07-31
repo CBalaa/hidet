@@ -48,5 +48,11 @@ from .transfer import transfer
 from .special import barrier
 from .distributed import all_reduce, all_gather, reduce_scatter
 from .linear import einsum
-
+# ====== add by kgc ======
+from .kgc import digamma
+from .kgc import gamma
+from .kgc import lgamma
+from .kgc import kg_norm
+from .kgc import scatter
+# ====== end ======
 from . import utils

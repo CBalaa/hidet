@@ -13,7 +13,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name="hidet",
+    name="hidet-KGC",
     version="0.3.1",
     description="Hidet: a compilation-based DNN inference framework.",
     long_description=open("README.md").read(),

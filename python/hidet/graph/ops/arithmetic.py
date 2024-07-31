@@ -565,14 +565,15 @@ class SignOp(UnaryElementwiseOp):
 
 class ClampOp(UnaryElementwiseOp):
     def __init__(self, x: Tensor, min_value: Union[int, float], max_value: Union[int, float]):
-        assert isinstance(min_value, (int, float))
-        assert isinstance(max_value, (int, float))
+        # assert isinstance(min_value, (int, float)) # changed
+        # assert isinstance(max_value, (int, float)) # changed
         min_value = x.dtype(min_value)
         max_value = x.dtype(max_value)
         super().__init__(
             x,
             op=lambda a: if_then_else(a < min_value, min_value, if_then_else(a > max_value, max_value, a)),
             name='clamp',
+            attributes={"min_value": min_value, "max_value": max_value} # changed
         )
 
 

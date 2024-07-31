@@ -264,6 +264,13 @@ def relative_absolute_error(actual, expected) -> float:
     """
     import torch
 
+    # changed
+    def is_empty_tensor(v):
+        return min(v.shape) == 0
+    # changed
+    if is_empty_tensor(actual) and is_empty_tensor(expected):
+        return float(0)
+
     actual: torch.Tensor = actual.detach().to(torch.float32)
     expected: torch.Tensor = expected.detach().to(torch.float32)
     return float(torch.max(torch.abs(actual - expected) / (torch.abs(expected) + 1.0)))

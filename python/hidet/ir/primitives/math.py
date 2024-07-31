@@ -206,6 +206,7 @@ class MathFunctionSetGeneric(MathFunctionSet):
         unary_names = [
             'sin',
             'cos',
+            'tan', # changed
             'tanh',
             'exp',
             'round',

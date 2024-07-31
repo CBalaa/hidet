@@ -115,8 +115,9 @@ def adaptive_avg_pool3d(x: Tensor, output_size):
     return ops.adaptive_avg_pool3d(x, output_size)
 
 
+# changed
 @register_function(torch.nn.functional.relu)
-def relu(x: Tensor, inplace: bool):
+def relu(x: Tensor, inplace: bool = False):
     # if inplace:
     #     warnings.warn_once('hidet: relu with inplace=True is not supported. Treat as inplace=False.')
     _ = inplace
@@ -248,8 +249,34 @@ def flatten(x: Tensor, start_dim: int, end_dim: int = -1):
     return ops.flatten(x, start_dim, end_dim)
 
 
+# changed
 @register_function(operator.getitem)
 def getitem(x: Tensor, index):
+    if isinstance(index, (list, tuple)):
+        if all(isinstance(item, int) for item in index):
+            # x[[1, 2, 3, 4..]], all element are all int
+            from hidet import asarray
+            return ops.take(x, asarray(index, device=x.device))
+        elif any(isinstance(item, slice) for item in index):
+            # x[(1:2, 1, 2, 3)], one element of idx is slice
+            start_list = []
+            stop_list = []
+            target_shape = []
+            for i, item in enumerate(index):
+                if isinstance(item, slice):
+                    start_index = 0 if item.start is None else item.start
+                    stop_index = x.shape[i] if item.stop is None else item.stop
+                    start_list.append(start_index)
+                    stop_list.append(stop_index)
+                    target_shape.append(stop_index - start_index)
+                elif isinstance(item, int):
+                    start_list.append(item)
+                    stop_list.append(item + 1)
+                else:
+                    assert False
+            target_shape += x.shape[len(index):]
+            return ops.reshape(ops.strided_slice(x, start_list, stop_list), shape=target_shape)
+        
     return x[index]
 
 
@@ -324,10 +351,16 @@ def mul(x: Tensor, y: Tensor):
     return x * y
 
 
+# changed
 @register_function(torch.cat)
-def cat(tensors: List[Tensor], dim: int = 0):
+def cat(tensors: List[Tensor], dim: int):
     dtype = functools.reduce(promote_type, [t.dtype for t in tensors])
     tensors = [ops.cast(t, dtype) for t in tensors]
+
+    for tensor in tensors:
+        if tensor.shape[0] == 0:
+            tensors.remove(tensor)
+            
     return ops.concat(tensors, dim)
 
 
@@ -417,6 +450,7 @@ def interpolate(
     )
 
 
+# changed
 @register_function(operator.truediv)
 def truediv(x: Union[Tensor, int, float], y: Union[Tensor, int, float]):
     import hidet
@@ -424,10 +458,15 @@ def truediv(x: Union[Tensor, int, float], y: Union[Tensor, int, float]):
     def is_integer(v: Union[Tensor, int, float]) -> bool:
         return isinstance(v, int) or (isinstance(v, Tensor) and v.dtype.is_integer())
 
-    if is_integer(x) and is_integer(y):
-        if isinstance(y, (int, float)):
-            y = hidet.asarray(y).to(device=x.device)
+    # if is_integer(x) and is_integer(y):
+    if isinstance(y, (int, float)) and isinstance(x, Tensor):
+        y = hidet.asarray(y).to(device=x.device)
         return x / ops.cast(y, 'float32')
+    elif isinstance(x, (int, float)) and isinstance(y, Tensor):
+        x = hidet.asarray(x).to(device=y.device)
+        return ops.cast(x, 'float32') / y
+    elif is_integer(x) and is_integer(y):
+        return x / ops.cast(y, dtype=hidet.float32)
     else:
         return x / y
 
@@ -1317,3 +1356,51 @@ def torch_chunk(x: Tensor, chunks: int, dim: int = 0):
 @register_function(torch.einsum)
 def torch_einsum(equation, *operands):
     return ops.einsum(equation, operands)
+
+# ========== add by KGC ==========
+import hidet
+@register_function(torch.nn.functional.Tensor)
+def torch_tensor(x):
+    return hidet.asarray(x)
+
+@register_function(torch.norm)
+def torch_norm(x, p=2, dim=1):
+    return ops.kg_norm(x, p, dim)
+
+@register_function(torch.index_select)
+def torch_index_select(input, dim, index):
+    return ops.transform.take(input, index, axis=dim)
+
+@register_function(torch.reshape)
+def tensor_reshape_function(self: Tensor, shape) -> Tensor:
+    return ops.reshape(self, shape)
+
+
+@register_function(torch.broadcast_tensors)
+def broadcast_tensors(*tensors):
+    from hidet.ir.utils.broadcast_utils import broadcast_shapes
+    shape_list = []
+    for t in tensors:
+        shape_list.append(t.shape)
+    b_shape = broadcast_shapes(shape_list)
+    new_tensors = []
+    for t in tensors:
+        new_tensors.append(ops.broadcast(t, b_shape))
+    return new_tensors
+
+@register_function(torch.digamma)
+def torch_digamma(x):
+    return ops.digamma(x)
+
+@register_function(torch._assert_async)
+def torch_assert_async(x, assert_msg):
+    return None
+
+@register_function(torch.add)
+def torch_add(x, y):
+    return ops.add(x, y)
+
+@register_function(torch.prod)
+def torch_prod(x: Tensor, dim: int):
+    return ops.prod(x, dim) 
+# ====== end ======
