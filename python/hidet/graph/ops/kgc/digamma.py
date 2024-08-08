@@ -2,6 +2,7 @@ from hidet.graph.ops.utils import Task, Operator, Tensor, TensorNode
 from hidet.graph.ops.utils import compute, input_like, reduce
 from hidet.ir import primitives as prim
 from hidet.ir import expr
+import math
 
 class DigammaTask(Task):
     def __init__(self, x: TensorNode):

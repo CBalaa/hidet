@@ -1,3 +1,4 @@
+rm ./hidet_KGC-0.3.1-py3-none-any.whl
 python setup.py bdist_wheel 
 cd build
 cmake ..

@@ -2,6 +2,7 @@ from hidet.graph.ops.utils import Task, Operator, Tensor, TensorNode
 from hidet.graph.ops.utils import compute, input_like, reduce
 from hidet.ir import primitives as prim
 from hidet.ir import expr
+from hidet.graph import ops
 import math
 
 class GammaTask(Task):
